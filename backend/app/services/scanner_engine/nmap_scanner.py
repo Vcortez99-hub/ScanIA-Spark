@@ -457,11 +457,13 @@ class NmapScanner(BaseScanner):
                     severity = self._assess_port_severity(port_num, service_info)
                     
                     vuln = VulnerabilityData(
+                        vulnerability_id=f"nmap_port_{target_host}_{port_num}_{protocol}",
                         title=title,
                         description=description,
                         severity=severity,
-                        url=f"{target_host}:{port_num}",
-                        evidence=json.dumps(port_info, indent=2),
+                        solution=self._get_port_remediation(port_num, service_info),
+                        affected_url=f"{target_host}:{port_num}",
+                        evidence={"port_info": port_info, "service": service_info},
                         tags=["port-scan", "network", protocol]
                     )
                     
@@ -479,11 +481,13 @@ class NmapScanner(BaseScanner):
             if parsed_results.get("os_detection"):
                 os_info = parsed_results["os_detection"]
                 vuln = VulnerabilityData(
+                    vulnerability_id=f"nmap_os_{target_host}",
                     title=f"OS Detection: {os_info.get('name', 'Unknown')}",
                     description=f"Operating system detected as: {os_info.get('name', 'Unknown')} (Accuracy: {os_info.get('accuracy', 'N/A')}%)",
                     severity=VulnerabilitySeverity.INFO,
-                    url=target_host,
-                    evidence=json.dumps(os_info, indent=2),
+                    solution="This is informational only. Review system configuration if OS disclosure is a concern.",
+                    affected_url=target_host,
+                    evidence={"os_info": os_info},
                     tags=["os-detection", "fingerprinting"]
                 )
                 vulnerabilities.append(vuln)
@@ -514,6 +518,44 @@ class NmapScanner(BaseScanner):
         else:
             return VulnerabilitySeverity.LOW
     
+    def _get_port_remediation(self, port: str, service_info: Dict[str, Any]) -> str:
+        """Get remediation advice for open port"""
+        port_num = int(port)
+        service_name = service_info.get("name", "").lower()
+        
+        remediation_map = {
+            21: "Replace FTP with SFTP or FTPS for secure file transfer",
+            22: "SSH is relatively secure, ensure strong authentication and latest version",
+            23: "Replace Telnet with SSH for secure remote access",
+            25: "Secure SMTP configuration and prevent open relay",
+            53: "Secure DNS server configuration and restrict zone transfers",
+            80: "Consider using HTTPS instead of HTTP for web traffic",
+            110: "Use secure POP3S or IMAP over TLS instead of plain POP3",
+            135: "Windows RPC - restrict access and apply latest security patches",
+            139: "NetBIOS - disable if not needed, restrict network access",
+            143: "Use IMAP over TLS instead of plain IMAP",
+            443: "HTTPS is secure, ensure proper TLS configuration",
+            445: "SMB - ensure latest patches and restrict network access",
+            993: "IMAPS - secure, verify TLS configuration",
+            995: "POP3S - secure, verify TLS configuration",
+            1433: "MSSQL - restrict network access and use SQL authentication",
+            1521: "Oracle DB - restrict network access and secure configuration",
+            3306: "MySQL - restrict network access and secure configuration",
+            3389: "RDP - use strong authentication and restrict network access",
+            5432: "PostgreSQL - restrict network access and secure configuration"
+        }
+        
+        if port_num in remediation_map:
+            return remediation_map[port_num]
+        elif "telnet" in service_name:
+            return "Replace Telnet with SSH for secure remote access"
+        elif "ftp" in service_name:
+            return "Replace FTP with SFTP or FTPS for secure file transfer"
+        elif any(db in service_name for db in ["mysql", "postgres", "oracle", "mssql"]):
+            return "Restrict database access to authorized networks only"
+        else:
+            return f"Review necessity of {service_name} service and restrict network access if possible"
+    
     def _process_script_result(self, script_info: Dict[str, Any], target_host: str, port: str, protocol: str) -> Optional[VulnerabilityData]:
         """Process Nmap script results and convert to vulnerabilities"""
         script_id = script_info.get("id", "")
@@ -543,11 +585,13 @@ class NmapScanner(BaseScanner):
             severity = VulnerabilitySeverity.INFO
         
         return VulnerabilityData(
+            vulnerability_id=f"nmap_script_{target_host}_{port}_{script_id}",
             title=f"Script Detection: {script_id}",
             description=f"Nmap script {script_id} found: {script_output[:200]}...",
             severity=severity,
-            url=f"{target_host}:{port}",
-            evidence=script_output,
+            solution=f"Review and remediate issues identified by Nmap script {script_id}",
+            affected_url=f"{target_host}:{port}",
+            evidence={"script_output": script_output, "script_id": script_id},
             tags=["script-scan", "nmap", script_id],
             confidence="Medium"
         )

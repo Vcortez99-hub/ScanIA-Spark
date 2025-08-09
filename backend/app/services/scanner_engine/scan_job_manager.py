@@ -213,6 +213,25 @@ class ScanJobManager:
                 }
             )
             
+            # Broadcast completion via WebSocket
+            try:
+                from app.api.v1.scanner_websocket import broadcast_scan_completion
+                # Get vulnerability summary
+                result = await self.db.execute(
+                    select(Scan).options(selectinload(Scan.vulnerabilities))
+                    .where(Scan.id == scan_id)
+                )
+                scan = result.scalar_one_or_none()
+                vulnerability_summary = scan.vulnerability_summary if scan else {}
+                duration = scan.duration_seconds if scan else None
+                
+                await broadcast_scan_completion(
+                    scan_id, "completed", "Scan completed successfully", 
+                    vulnerability_summary, duration
+                )
+            except Exception as e:
+                logger.warning(f"Failed to broadcast completion via WebSocket: {e}")
+            
             logger.info(f"Scan job {scan_id} completed successfully")
             
         except Exception as e:
@@ -225,6 +244,15 @@ class ScanJobManager:
                     "completed_at": datetime.utcnow()
                 }
             )
+            
+            # Broadcast failure via WebSocket
+            try:
+                from app.api.v1.scanner_websocket import broadcast_scan_completion
+                await broadcast_scan_completion(
+                    scan_id, "failed", f"Scan failed: {str(e)}"
+                )
+            except Exception as ws_error:
+                logger.warning(f"Failed to broadcast failure via WebSocket: {ws_error}")
         
         finally:
             # Clean up job
@@ -280,15 +308,15 @@ class ScanJobManager:
             # Create vulnerability record
             vulnerability = Vulnerability(
                 scan_id=scan_id,
+                vulnerability_id=vuln_data.vulnerability_id,
                 title=vuln_data.title,
                 description=vuln_data.description,
                 severity=model_severity,
+                solution=vuln_data.solution,
+                affected_url=vuln_data.affected_url,
+                evidence=vuln_data.evidence,
                 cvss_score=vuln_data.cvss_score,
                 cve_id=vuln_data.cve_id,
-                url=vuln_data.url,
-                parameter=vuln_data.parameter,
-                evidence=vuln_data.evidence,
-                solution=vuln_data.solution,
                 references=vuln_data.references,
                 tags=vuln_data.tags,
                 confidence=vuln_data.confidence,
@@ -329,7 +357,7 @@ class ScanJobManager:
     
     async def _update_progress(self, scan_id: str, progress: float, message: str):
         """
-        Update scan progress (for future WebSocket integration).
+        Update scan progress with WebSocket broadcast.
         
         Args:
             scan_id: Scan ID
@@ -338,6 +366,13 @@ class ScanJobManager:
         """
         # Store progress update for potential WebSocket broadcast
         logger.info(f"Scan {scan_id} progress: {progress:.1f}% - {message}")
+        
+        # Broadcast to WebSocket clients
+        try:
+            from app.api.v1.scanner_websocket import broadcast_scan_progress
+            await broadcast_scan_progress(scan_id, progress, message)
+        except Exception as e:
+            logger.warning(f"Failed to broadcast progress via WebSocket: {e}")
         
         # Call any registered progress callbacks
         if scan_id in self.progress_callbacks:

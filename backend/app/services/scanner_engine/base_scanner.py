@@ -16,6 +16,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ScannerException(Exception):
+    """Base exception for scanner errors"""
+    pass
+
+
 class ScanType(str, Enum):
     """Supported scan types"""
     OWASP_ZAP = "owasp_zap"
@@ -37,19 +42,32 @@ class VulnerabilitySeverity(str, Enum):
 @dataclass
 class VulnerabilityData:
     """Data class for vulnerability information"""
+    vulnerability_id: str
     title: str
     description: str
     severity: VulnerabilitySeverity
+    solution: str
+    affected_url: str
+    evidence: Dict[str, Any] = field(default_factory=dict)
     cvss_score: Optional[float] = None
     cve_id: Optional[str] = None
-    url: Optional[str] = None
     parameter: Optional[str] = None
-    evidence: Optional[str] = None
-    solution: Optional[str] = None
     references: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     confidence: Optional[str] = None
     risk_description: Optional[str] = None
+
+    @property
+    def severity_weight(self) -> int:
+        """Return numeric weight for severity comparison"""
+        weights = {
+            VulnerabilitySeverity.CRITICAL: 5,
+            VulnerabilitySeverity.HIGH: 4,
+            VulnerabilitySeverity.MEDIUM: 3,
+            VulnerabilitySeverity.LOW: 2,
+            VulnerabilitySeverity.INFO: 1
+        }
+        return weights.get(self.severity, 0)
 
 
 @dataclass
@@ -192,3 +210,38 @@ class BaseScanner(ABC):
             bool: True if scanner is healthy
         """
         return True
+    
+    def _map_severity(self, raw_severity: str) -> VulnerabilitySeverity:
+        """Map raw severity string to VulnerabilitySeverity enum"""
+        severity_map = {
+            'critical': VulnerabilitySeverity.CRITICAL,
+            'high': VulnerabilitySeverity.HIGH,
+            'medium': VulnerabilitySeverity.MEDIUM,
+            'low': VulnerabilitySeverity.LOW,
+            'info': VulnerabilitySeverity.INFO,
+            'informational': VulnerabilitySeverity.INFO,
+            # Add more mappings as needed
+        }
+        return severity_map.get(raw_severity.lower(), VulnerabilitySeverity.INFO)
+    
+    def _calculate_cvss_score(self, severity: VulnerabilitySeverity) -> float:
+        """Calculate approximate CVSS score based on severity"""
+        cvss_map = {
+            VulnerabilitySeverity.CRITICAL: 9.0,
+            VulnerabilitySeverity.HIGH: 7.0,
+            VulnerabilitySeverity.MEDIUM: 5.0,
+            VulnerabilitySeverity.LOW: 3.0,
+            VulnerabilitySeverity.INFO: 0.0
+        }
+        return cvss_map.get(severity, 0.0)
+    
+    async def _validate_target_url(self, target_url: str) -> bool:
+        """Validate if target URL is accessible"""
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.head(target_url, timeout=10) as response:
+                    return response.status < 400
+        except Exception as e:
+            logger.warning(f"Target URL validation failed: {e}")
+            return False
