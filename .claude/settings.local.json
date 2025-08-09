@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose:*)",
+      "Bash(python:*)",
+      "Bash(venvScripts:*)",
+      "Bash(pip install:*)",
+      "Bash(./venv/Scripts/activate)",
+      "Bash(winget install:*)",
+      "Bash(py:*)",
+      "Bash(rm:*)",
+      "Bash(source:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(.venvScriptsactivate.bat)",
+      "Bash(.venvScriptspython.exe --version)",
+      "Bash(npm:*)",
+      "Bash(venv/Scripts/python.exe -m pip install:*)",
+      "Bash(docker exec:*)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(set DATABASE_URL=postgresql://scania_user:scania_pass@localhost:5433/scania_db)",
+      "Bash(set REDIS_URL=redis://localhost:6381/0)",
+      "Bash(set JWT_SECRET_KEY=dev-jwt-secret)",
+      "Bash(docker restart:*)",
+      "Bash(timeout:*)",
+      "Bash(PowerShell:*)",
+      "Bash(start:*)",
+      "Bash(cp:*)",
+      "Bash(docker:*)",
+      "Bash(dir)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

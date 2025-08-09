@@ -1,0 +1,73 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+
+# Build outputs
+dist/
+build/
+.next/
+*.egg-info/
+
+# Coverage reports
+coverage/
+.coverage
+.nyc_output
+htmlcov/
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+backups/
+*.bak
+
+# SSL certificates
+*.pem
+*.crt
+*.key
+
+# Models and data
+models/
+data/
+uploads/
+
+# Scanner outputs
+scanner_data/
+reports/
+
+# Testing
+.pytest_cache/
+test-results/

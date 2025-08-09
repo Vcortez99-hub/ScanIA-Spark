@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+# Install system dependencies for scanning
+RUN apt-get update && apt-get install -y \
+    nmap \
+    nikto \
+    curl \
+    wget \
+    dnsutils \
+    whois \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy scanner code
+COPY . .
+
+# Create directories for scanner data
+RUN mkdir -p /app/data /app/reports /app/logs
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash scanner
+RUN chown -R scanner:scanner /app
+USER scanner
+
+CMD ["python", "-m", "celery", "worker", "-A", "scanner.tasks", "--loglevel=info"]

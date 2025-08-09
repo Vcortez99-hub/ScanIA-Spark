@@ -1,0 +1,17 @@
+{
+  "name": "scania-project",
+  "version": "1.0.0",
+  "description": "ScanIA - Sistema Inteligente de Análise de Cybersegurança",
+  "scripts": {
+    "dev": "docker-compose up -d",
+    "build": "docker-compose -f docker-compose.prod.yml build",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm test",
+    "test:backend": "cd backend && pytest tests/ -v",
+    "deploy": "./scripts/deploy.sh",
+    "setup": "./scripts/setup.sh"
+  },
+  "keywords": ["cybersecurity", "vulnerability-scanner", "security-analysis"],
+  "author": "ScanIA Team",
+  "license": "MIT"
+}
