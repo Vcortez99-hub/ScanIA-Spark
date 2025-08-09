@@ -35,7 +35,11 @@
       "Bash(curl:*)",
       "Bash(tasklist:*)",
       "Bash(taskkill:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }
